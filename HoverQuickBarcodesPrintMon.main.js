@@ -5,6 +5,8 @@
 // @description  Prodeo-style hover barcode popup with Copy and Print buttons. Runs only on https://rodeo-dub.amazon.com/NCL1/Search* pages.
 // @author       Prince Jacob (Wprijaco)
 // @match        https://rodeo-dub.amazon.com/NCL1/Search*
+// @updateURL    https://raw.githubusercontent.com/prince-jacob/-HoverQuickBarcodesPrintMon/refs/heads/main/HoverQuickBarcodesPrintMon.main.js
+// @downloadURL  https://raw.githubusercontent.com/prince-jacob/-HoverQuickBarcodesPrintMon/refs/heads/main/HoverQuickBarcodesPrintMon.main.js
 // @grant        GM_setClipboard
 // @grant        GM_addStyle
 // @connect      localhost
