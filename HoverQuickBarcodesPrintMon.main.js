@@ -1,18 +1,23 @@
 // ==UserScript==
 // @name         Rodeo NCL1 Hover Quick Barcodes PrintMon
 // @namespace    wprijaco.rodeo.ncl1.hover.quickbarcodes.printmon
-// @version      1.1.0
+// @version      1.1.1
 // @description  Prodeo-style hover barcode popup with Copy and Print buttons. Runs only on https://rodeo-dub.amazon.com/NCL1/Search* pages.
 // @author       Prince Jacob (Wprijaco)
 // @match        https://rodeo-dub.amazon.com/NCL1/Search*
-// @updateURL    https://raw.githubusercontent.com/prince-jacob/HoverQuickBarcodesPrintMon/refs/heads/main/HoverQuickBarcodesPrintMon.main.js
-// @downloadURL  https://raw.githubusercontent.com/prince-jacob/HoverQuickBarcodesPrintMon/refs/heads/main/HoverQuickBarcodesPrintMon.main.js
+// @updateURL    https://raw.githubusercontent.com/prince-jacob/-HoverQuickBarcodesPrintMon/refs/heads/main/HoverQuickBarcodesPrintMon.txt
+// @downloadURL  https://raw.githubusercontent.com/prince-jacob/-HoverQuickBarcodesPrintMon/refs/heads/main/HoverQuickBarcodesPrintMon.txt
 // @grant        GM_setClipboard
 // @grant        GM_addStyle
 // @connect      localhost
 // @connect      127.0.0.1
 // @require      https://cdnjs.cloudflare.com/ajax/libs/bwip-js/3.0.4/bwip-js-min.js
 // @run-at       document-idle
+// @grant        GM_xmlhttpRequest
+// @grant        GM_getValue
+// @grant        GM_setValue
+// @grant        GM_info
+// @connect      raw.githubusercontent.com
 // ==/UserScript==
 
 (function () {
@@ -480,4 +485,74 @@
   } else {
     init();
   }
+
+  // ===== Prince Jacob Custom Update Checker - Every 10 Hours =====
+  (function princeUpdateChecker() {
+    const UPDATE_URL = "https://raw.githubusercontent.com/prince-jacob/-HoverQuickBarcodesPrintMon/refs/heads/main/HoverQuickBarcodesPrintMon.txt";
+    const CHECK_KEY = "prince_last_update_check_" + GM_info.script.name;
+    const CHECK_INTERVAL = 10 * 60 * 60 * 1000; // 10 hours
+
+    const lastCheck = Number(GM_getValue(CHECK_KEY, 0));
+    const now = Date.now();
+
+    if (now - lastCheck < CHECK_INTERVAL) {
+      return;
+    }
+
+    GM_setValue(CHECK_KEY, now);
+
+    GM_xmlhttpRequest({
+      method: "GET",
+      url: UPDATE_URL,
+      nocache: true,
+      onload: function (res) {
+        const remoteScript = res.responseText || "";
+        const remoteMatch = remoteScript.match(/\/\/\s*@version\s+([0-9.]+)/i);
+
+        if (!remoteMatch) {
+          console.log("[Update Checker] Remote version not found.");
+          return;
+        }
+
+        const remoteVersion = remoteMatch[1];
+        const currentVersion = GM_info.script.version;
+
+        if (isNewerVersion(remoteVersion, currentVersion)) {
+          const openUpdate = confirm(
+            "New script update available!\n\n" +
+            "Script: " + GM_info.script.name + "\n" +
+            "Current version: " + currentVersion + "\n" +
+            "New version: " + remoteVersion + "\n\n" +
+            "Open update page now?"
+          );
+
+          if (openUpdate) {
+            window.open(UPDATE_URL, "_blank");
+          }
+        } else {
+          console.log("[Update Checker] Up to date:", currentVersion);
+        }
+      },
+      onerror: function () {
+        console.log("[Update Checker] Failed to check update.");
+      }
+    });
+
+    function isNewerVersion(remote, current) {
+      const r = String(remote).split(".").map(Number);
+      const c = String(current).split(".").map(Number);
+      const len = Math.max(r.length, c.length);
+
+      for (let i = 0; i < len; i++) {
+        const rv = r[i] || 0;
+        const cv = c[i] || 0;
+
+        if (rv > cv) return true;
+        if (rv < cv) return false;
+      }
+
+      return false;
+    }
+  })();
+
 })();
