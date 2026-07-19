@@ -1,12 +1,13 @@
 // ==UserScript==
 // @name         Rodeo NCL1 Hover Quick Barcodes PrintMon
 // @namespace    wprijaco.rodeo.ncl1.hover.quickbarcodes.printmon
-// @version      1.1.1
+// @version      1.1.2
 // @description  Prodeo-style hover barcode popup with Copy and Print buttons. Runs only on https://rodeo-dub.amazon.com/NCL1/Search* pages.
 // @author       Prince Jacob (Wprijaco)
-// @match        https://rodeo-dub.amazon.com/NCL1/Search*
-// @updateURL    https://raw.githubusercontent.com/prince-jacob/-HoverQuickBarcodesPrintMon/refs/heads/main/HoverQuickBarcodesPrintMon.main.js
-// @downloadURL  https://raw.githubusercontent.com/prince-jacob/-HoverQuickBarcodesPrintMon/refs/heads/main/HoverQuickBarcodesPrintMon.main.js
+// @match        https://rodeo-dub.amazon.com/*
+// @match        https://flow-sortation-eu.amazon.com/*
+// @updateURL    https://raw.githubusercontent.com/prince-jacob/-HoverQuickBarcodesPrintMon/refs/heads/main/HoverQuickBarcodesPrintMon.txt
+// @downloadURL  https://raw.githubusercontent.com/prince-jacob/-HoverQuickBarcodesPrintMon/refs/heads/main/HoverQuickBarcodesPrintMon.txt
 // @grant        GM_setClipboard
 // @grant        GM_addStyle
 // @connect      localhost
@@ -23,11 +24,19 @@
 (function () {
   "use strict";
 
-  const ALLOWED_PREFIX = "https://rodeo-dub.amazon.com/NCL1/Search";
-  if (!window.location.href.startsWith(ALLOWED_PREFIX)) return;
+  const ALLOWED_HOSTS = new Set([
+    "rodeo-dub.amazon.com",
+    "flow-sortation-eu.amazon.com"
+  ]);
+
+  function isAllowedPage() {
+    return ALLOWED_HOSTS.has(window.location.hostname);
+  }
+
+  if (!isAllowedPage()) return;
 
   const SCRIPT_NAME = "Rodeo NCL1 Hover Quick Barcodes PrintMon";
-  const VERSION = "1.1.0";
+  const VERSION = "1.1.2";
 
   const CONFIG = {
     minLen: 2,
@@ -332,6 +341,8 @@
     const selectors = [
       "table.result-table tbody td",
       "table.result-table tbody td a",
+      "table tbody td",
+      "table tbody td a",
       "td.filterable",
       "td.retail",
       "td",
@@ -350,7 +361,7 @@
   }
 
   function scanPage() {
-    if (!window.location.href.startsWith(ALLOWED_PREFIX)) return;
+    if (!isAllowedPage()) return;
     getCandidateElements().forEach(attachQuickBarcode);
   }
 
@@ -477,7 +488,7 @@
     observer.observe(document.body, { childList: true, subtree: true });
     setInterval(scanPage, CONFIG.scanIntervalMs);
 
-    console.log(`${SCRIPT_NAME} v${VERSION} loaded. Runs only on ${ALLOWED_PREFIX}*`);
+    console.log(`${SCRIPT_NAME} v${VERSION} loaded on ${window.location.hostname}.`);
   }
 
   if (document.readyState === "loading") {
@@ -488,7 +499,7 @@
 
   // ===== Prince Jacob Custom Update Checker - Every 10 Hours =====
   (function princeUpdateChecker() {
-    const UPDATE_URL = "https://raw.githubusercontent.com/prince-jacob/-HoverQuickBarcodesPrintMon/refs/heads/main/HoverQuickBarcodesPrintMon.main.js";
+    const UPDATE_URL = "https://raw.githubusercontent.com/prince-jacob/-HoverQuickBarcodesPrintMon/refs/heads/main/HoverQuickBarcodesPrintMon.txt";
     const CHECK_KEY = "prince_last_update_check_" + GM_info.script.name;
     const CHECK_INTERVAL = 10 * 60 * 60 * 1000; // 10 hours
 
