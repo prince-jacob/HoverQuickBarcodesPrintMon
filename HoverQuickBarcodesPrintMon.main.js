@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Rodeo NCL1 Hover Quick Barcodes PrintMon
 // @namespace    wprijaco.rodeo.ncl1.hover.quickbarcodes.printmon
-// @version      1.1.3
+// @version      1.1.4
 // @description  Prodeo-style hover barcode popup with Copy and Print buttons. Runs only on https://rodeo-dub.amazon.com/NCL1/Search* pages.
 // @author       Prince Jacob (Wprijaco)
 // @match        https://rodeo-dub.amazon.com/*
@@ -61,10 +61,91 @@
     tooltip.style.display = "block";
   }
 
+  function getOrCreateFlowTooltip() {
+    if (flowTooltip && document.body.contains(flowTooltip)) return flowTooltip;
+
+    flowTooltip = document.createElement("div");
+    flowTooltip.id = "pj-flow-global-tooltip";
+    flowTooltip.className = "pj-bctt-span pj-bctt-flow-fixed";
+    flowTooltip.addEventListener("mouseenter", () => {
+      clearTimeout(flowHideTimer);
+    });
+    flowTooltip.addEventListener("mouseleave", () => {
+      scheduleHideFlowTooltip();
+    });
+    flowTooltip.addEventListener("click", e => e.stopPropagation());
+    flowTooltip.addEventListener("mousedown", e => e.stopPropagation());
+    document.body.appendChild(flowTooltip);
+    return flowTooltip;
+  }
+
+  function scheduleHideFlowTooltip(delay = 220) {
+    clearTimeout(flowHideTimer);
+    flowHideTimer = setTimeout(() => {
+      if (flowTooltip && !flowTooltip.matches(":hover")) {
+        flowTooltip.style.display = "none";
+      }
+    }, delay);
+  }
+
+  function showFlowTooltip(host, text, desc, mouseEvent) {
+    clearTimeout(flowHideTimer);
+
+    const tooltip = getOrCreateFlowTooltip();
+    tooltip.innerHTML = "";
+
+    const img = makeBarcodeImage(text);
+    if (!img) return;
+
+    const buttonRow = document.createElement("div");
+    buttonRow.className = "pj-qb-button-row";
+
+    const printBtn = document.createElement("button");
+    printBtn.type = "button";
+    printBtn.className = "pj-qb-btn pj-qb-print";
+    printBtn.textContent = "🖨️ Print";
+    printBtn.addEventListener("click", e => {
+      e.preventDefault();
+      e.stopPropagation();
+      printmonBarcode(text, text, desc);
+    });
+
+    const copyBtn = document.createElement("button");
+    copyBtn.type = "button";
+    copyBtn.className = "pj-qb-btn pj-qb-copy";
+    copyBtn.textContent = "📋 Copy";
+    copyBtn.addEventListener("click", e => {
+      e.preventDefault();
+      e.stopPropagation();
+      copyText(text);
+    });
+
+    buttonRow.append(printBtn, copyBtn);
+    tooltip.appendChild(buttonRow);
+
+    if (desc) {
+      const descLine = document.createElement("div");
+      descLine.className = "pj-qb-desc";
+      descLine.textContent = "Title: " + desc;
+      tooltip.appendChild(descLine);
+    }
+
+    const textLine = document.createElement("div");
+    textLine.className = "pj-qb-text";
+    textLine.textContent = text;
+
+    tooltip.appendChild(img);
+    tooltip.appendChild(textLine);
+
+    tooltip.style.display = "block";
+    positionFlowTooltip(tooltip, mouseEvent);
+  }
+
+
   if (!isAllowedPage()) return;
 
   const SCRIPT_NAME = "Rodeo NCL1 Hover Quick Barcodes PrintMon";
-  const VERSION = "1.1.3";
+  const VERSION = "1.1.4";
 
   const CONFIG = {
     minLen: 2,
@@ -73,6 +154,9 @@
     tooltipOffsetTop: 20,
     tooltipOffsetLeft: 45
   };
+
+  let flowTooltip = null;
+  let flowHideTimer = null;
 
   function cleanText(input) {
     return String(input || "")
@@ -331,10 +415,17 @@
     el.dataset.pjQbAttached = "1";
 
     el.addEventListener("mouseenter", function (mouseEvent) {
-      if (el.querySelector(".pj-bctt-span")) return;
-
       const text = getBestText(el);
       if (!looksPrintable(text)) return;
+
+      const desc = getPrintDescription(el, text);
+
+      if (isFlowSortationPage()) {
+        showFlowTooltip(el, text, desc, mouseEvent);
+        return;
+      }
+
+      if (el.querySelector(".pj-bctt-span")) return;
 
       const img = makeBarcodeImage(text);
       if (!img) return;
@@ -350,7 +441,6 @@
       textLine.className = "pj-qb-text";
       textLine.textContent = text;
 
-      const desc = getPrintDescription(el, text);
       if (desc) {
         const descLine = document.createElement("div");
         descLine.className = "pj-qb-desc";
@@ -361,26 +451,13 @@
       span.appendChild(img);
       span.appendChild(textLine);
       el.appendChild(span);
-
-      if (isFlowSortationPage()) {
-        span.classList.add("pj-bctt-flow-fixed");
-        positionFlowTooltip(span, mouseEvent);
-      }
-
       addPrintAndCopyButtons(el, text, desc);
     }, false);
 
     el.addEventListener("mouseleave", function () {
-      if (!isFlowSortationPage()) return;
-
-      const tooltip = el.querySelector(".pj-bctt-span");
-      if (!tooltip) return;
-
-      setTimeout(() => {
-        if (!tooltip.matches(":hover") && !el.matches(":hover")) {
-          tooltip.remove();
-        }
-      }, 220);
+      if (isFlowSortationPage()) {
+        scheduleHideFlowTooltip();
+      }
     }, false);
   }
 
@@ -444,9 +521,20 @@
       }
 
       .pj-bctt-flow-fixed {
-        display: block !important;
+        display: none;
         position: fixed !important;
         z-index: 2147483647 !important;
+        width: auto;
+        min-width: 220px;
+        max-width: 420px;
+        border: 1px solid #000;
+        border-radius: 8px;
+        background: #fff;
+        color: #000;
+        overflow: hidden;
+        padding: 8px;
+        box-shadow: 0 8px 22px rgba(0,0,0,.35);
+        font-family: Arial, sans-serif;
       }
 
       .pj-bctt-span img {
