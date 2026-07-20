@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Rodeo NCL1 Hover Quick Barcodes PrintMon
 // @namespace    wprijaco.rodeo.ncl1.hover.quickbarcodes.printmon
-// @version      1.1.2
+// @version      1.1.3
 // @description  Prodeo-style hover barcode popup with Copy and Print buttons. Runs only on https://rodeo-dub.amazon.com/NCL1/Search* pages.
 // @author       Prince Jacob (Wprijaco)
 // @match        https://rodeo-dub.amazon.com/*
@@ -33,10 +33,38 @@
     return ALLOWED_HOSTS.has(window.location.hostname);
   }
 
+  function isFlowSortationPage() {
+    return window.location.hostname === "flow-sortation-eu.amazon.com";
+  }
+
+  function positionFlowTooltip(tooltip, mouseEvent) {
+    const gap = 18;
+    const width = 430;
+    const height = 190;
+
+    let left = mouseEvent.clientX + gap;
+    let top = mouseEvent.clientY + gap;
+
+    if (left + width > window.innerWidth - 10) {
+      left = Math.max(10, mouseEvent.clientX - width - gap);
+    }
+
+    if (top + height > window.innerHeight - 10) {
+      top = Math.max(10, mouseEvent.clientY - height - gap);
+    }
+
+    tooltip.style.position = "fixed";
+    tooltip.style.left = left + "px";
+    tooltip.style.top = top + "px";
+    tooltip.style.right = "auto";
+    tooltip.style.bottom = "auto";
+    tooltip.style.display = "block";
+  }
+
   if (!isAllowedPage()) return;
 
   const SCRIPT_NAME = "Rodeo NCL1 Hover Quick Barcodes PrintMon";
-  const VERSION = "1.1.2";
+  const VERSION = "1.1.3";
 
   const CONFIG = {
     minLen: 2,
@@ -302,7 +330,7 @@
 
     el.dataset.pjQbAttached = "1";
 
-    el.addEventListener("mouseenter", function () {
+    el.addEventListener("mouseenter", function (mouseEvent) {
       if (el.querySelector(".pj-bctt-span")) return;
 
       const text = getBestText(el);
@@ -333,7 +361,26 @@
       span.appendChild(img);
       span.appendChild(textLine);
       el.appendChild(span);
+
+      if (isFlowSortationPage()) {
+        span.classList.add("pj-bctt-flow-fixed");
+        positionFlowTooltip(span, mouseEvent);
+      }
+
       addPrintAndCopyButtons(el, text, desc);
+    }, false);
+
+    el.addEventListener("mouseleave", function () {
+      if (!isFlowSortationPage()) return;
+
+      const tooltip = el.querySelector(".pj-bctt-span");
+      if (!tooltip) return;
+
+      setTimeout(() => {
+        if (!tooltip.matches(":hover") && !el.matches(":hover")) {
+          tooltip.remove();
+        }
+      }, 220);
     }, false);
   }
 
@@ -394,6 +441,12 @@
       .pj-barcodeTooltip:hover .pj-bctt-span,
       .pj-barcodeTooltip .pj-bctt-span:hover {
         display: block;
+      }
+
+      .pj-bctt-flow-fixed {
+        display: block !important;
+        position: fixed !important;
+        z-index: 2147483647 !important;
       }
 
       .pj-bctt-span img {
